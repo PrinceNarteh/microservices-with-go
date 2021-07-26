@@ -1,24 +1,48 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"context"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/PrinceNarteh/microservices-with-go/handlers"
 )
 
 func main() {
-	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		data, err := ioutil.ReadAll(r.Body)
+	l := log.New(os.Stdout, "product-api", log.LstdFlags)
+	hh := handlers.NewHello(l)
+	gh := handlers.NewGoodBye(l)
+
+	sm := http.NewServeMux()
+	sm.Handle("/", hh)
+	sm.Handle("/goodbye", gh)
+
+	server := &http.Server{
+		Addr:         ":4000",
+		Handler:      sm,
+		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 1 * time.Second,
+	}
+
+	go func() {
+		err := server.ListenAndServe()
 		if err != nil {
-			http.Error(rw, "Oops", http.StatusBadRequest)
-			return
+			log.Fatal(err)
 		}
-		fmt.Fprintf(rw, "Hello %s", data)
-	})
+	}()
 
-	http.HandleFunc("/goodbye", func(rw http.ResponseWriter, r *http.Request) {
-		fmt.Println("Goodby World!")
-	})
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, os.Kill)
 
-	http.ListenAndServe(":4000", nil)
+	sig := <-sigChan
+	l.Println("Received terminate, graceful shutdown", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	server.Shutdown(ctx)
 }
