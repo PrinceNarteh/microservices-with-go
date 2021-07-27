@@ -1,6 +1,10 @@
 package data
 
-import "time"
+import (
+	"encoding/json"
+	"io"
+	"time"
+)
 
 //Product defines the structure for an API product
 type Product struct {
@@ -12,6 +16,17 @@ type Product struct {
 	CreateOn    string  `json:"-"`
 	UpdatedOn   string  `json:"-"`
 	DeletedOn   string  `json:"-"`
+}
+
+type Products []*Product
+
+func (p *Products) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(p)
+}
+
+func GetProduct() Products {
+	return productList
 }
 
 var productList = []*Product{
@@ -33,8 +48,4 @@ var productList = []*Product{
 		CreateOn:    time.Now().UTC().String(),
 		UpdatedOn:   time.Now().UTC().String(),
 	},
-}
-
-func GetProduct() []*Product {
-	return productList
 }
