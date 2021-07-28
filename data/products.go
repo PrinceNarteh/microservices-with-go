@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 )
@@ -20,6 +21,8 @@ type Product struct {
 
 // Products is a collection of Product
 type Products []*Product
+
+var ErrProductNotFound = fmt.Errorf("Product not found")
 
 func (p *Product) FromJSON(r io.Reader) error {
 	e := json.NewDecoder(r)
@@ -45,9 +48,28 @@ func AddProduct(p *Product) {
 	productList = append(productList, p)
 }
 
+func UpdateProduct(id int, p *Product) error {
+	_, pos, err := findProduct(id)
+	if err != nil {
+		return err
+	}
+	p.ID = id
+	productList[pos] = p
+	return nil
+}
+
 func getNextID() int {
 	productListLength := productList[len(productList)-1]
 	return productListLength.ID + 1
+}
+
+func findProduct(id int) (*Product, int, error) {
+	for index, p := range productList {
+		if p.ID == id {
+			return p, index, nil
+		}
+	}
+	return nil, -1, ErrProductNotFound
 }
 
 var productList = []*Product{
