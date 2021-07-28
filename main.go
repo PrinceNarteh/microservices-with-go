@@ -14,14 +14,28 @@ import (
 
 func main() {
 	l := log.New(os.Stdout, "product-api", log.LstdFlags)
-	ph := handlers.NewProducts(l)
 
-	sm := mux.NewRouter()
-	sm.Handle("/products", ph)
+	// create the product handler
+	productHandler := handlers.NewProducts(l)
+
+	// create a new serve mux and register the handlers
+	router := mux.NewRouter()
+
+	// handles all get requests
+	getRouter := router.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/", productHandler.GetProducts)
+
+	// handles all post requests
+	postRouter := router.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/", productHandler.AddProduct)
+
+	// handles all put requests
+	putRouter := router.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", productHandler.UpdateProduct)
 
 	server := &http.Server{
 		Addr:         ":4000",
-		Handler:      sm,
+		Handler:      router,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 1 * time.Second,
